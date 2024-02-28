@@ -35,5 +35,5 @@ async def home():
 async  def submit(personParam :PredictItem):
 
     #person = PredictItem(personParam.male, personParam.age, personParam.height, personParam.weight, personParam.duration, personParam.heart_rate, personParam.body_temp)
-
+    print(personParam.age)
     return "save"
