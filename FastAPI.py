@@ -11,6 +11,15 @@ def predict(person):
     predictions = model.predict(X_test)
     return predictions
 
+class Person:
+    def __init__(self, male, age,height,weight, duration, heart_rate,body_temp):
+        self.male = male
+        self.age = age
+        self.height =  height
+        self.weight = weight
+        self.duration = duration
+        self.heart_rate = heart_rate
+        self.body_temp = body_temp
 
 class MyItem(BaseModel):
     name:str
@@ -33,7 +42,7 @@ async def home():
     return "hello"
 @app.post("/submit")
 async  def submit(personParam :PredictItem):
+    person = Person(personParam.male, personParam.age, personParam.height, personParam.weight, personParam.duration, personParam.heart_rate, personParam.body_temp)
+    calo =predict(person)
 
-    #person = PredictItem(personParam.male, personParam.age, personParam.height, personParam.weight, personParam.duration, personParam.heart_rate, personParam.body_temp)
-    print(personParam.age)
-    return "save"
+    return str(calo)
