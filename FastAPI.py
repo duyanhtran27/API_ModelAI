@@ -6,8 +6,17 @@ import pandas as pd
 import numpy as np
 import random
 import json
-
+from fastapi.responses import JSONResponse
 import random
+
+def convert_numpy(data):
+    if isinstance(data, np.ndarray):
+        return data.tolist()
+    elif isinstance(data, dict):
+        return {key: convert_numpy(value) for key, value in data.items()}
+    elif isinstance(data, list):
+        return [convert_numpy(item) for item in data]
+    return data
 
 def dailyCalories(gioi_tinh, tuoi, chieu_cao, can_nang):
     if gioi_tinh == 1:  # Nam
@@ -44,12 +53,18 @@ def in_menu(thuc_don, daily_calories, calo_burn):
         for bua, mon_an in bua_an.items():
             mon_an_json = []
             for item in mon_an:
-                calo = round(item[1] * daily_calories, 2)
-                mon_an_json.append({"món": item[0], "calo": calo, "khối lượng": round(calo / 4, 2)})
+                ten_mon_an = item[0]
+                ty_le_calo = item[1].item() if isinstance(item[1], np.ndarray) else item[1]
+                calo = round(ty_le_calo * daily_calories, 2)
+                mon_an_json.append({
+                    "món": ten_mon_an,
+                    "khối_lượng_calo": float(calo),
+                    "khối_lượng_thức_ăn": round(calo / 4, 2)
+                })
             bua_json[bua] = mon_an_json
         menu_json["menu"][ngay] = bua_json
-
-    return json.dumps(menu_json, indent=4, ensure_ascii=False)
+    menu_json = convert_numpy(menu_json)
+    return menu_json
 
 def main():
     tuoi = int(input("Nhập tuổi của bạn: "))
@@ -103,23 +118,25 @@ class PredictItem(BaseModel):
     heart_rate: float
     body_temp: float
 
+
+
 app = FastAPI()
 
 @app.get("/")
 async def home():
-    return "hello"
+    json_content = {"key": "value",
+                    "key1": "value"}
+    return JSONResponse(content=json_content)
 @app.post("/submit")
 async  def submit(personParam :PredictItem):
     person = Person(personParam.male, personParam.age, personParam.height, personParam.weight, personParam.duration, personParam.heart_rate, personParam.body_temp)
     calo =predict(person)
 
     if personParam.male == 1 or personParam.male == 0:
-        daily_calories = dailyCalories(personParam.male, personParam.age, personParam.height, personParam.weight)
-        print("Nhu cầu calo hàng ngày của bạn là:", daily_calories)
-        
-        # Tạo và in ra thực đơn
-        thuc_don = tao_thuc_don(daily_calories)
+        daily_calories = dailyCalories(personParam.male, personParam.age, personParam.height, personParam.weight)        
+
+        thuc_don = convert_numpy(tao_thuc_don(daily_calories))
         menu_json_str = in_menu(thuc_don, daily_calories,calo)
-        return str(menu_json_str)
+        return menu_json_str
     else:
         return None
