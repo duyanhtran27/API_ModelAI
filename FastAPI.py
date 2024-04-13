@@ -33,9 +33,10 @@ def tao_thuc_don(daily_calories):
         }
     return thuc_don
 
-def in_menu(thuc_don, daily_calories):
+def in_menu(thuc_don, daily_calories, calo_burn):
     menu_json = {
         "daily_calories": daily_calories,
+        "calo_burn": calo_burn,
         "menu": {}
     }
     for ngay, bua_an in thuc_don.items():
@@ -46,9 +47,9 @@ def in_menu(thuc_don, daily_calories):
                 calo = round(item[1] * daily_calories, 2)
                 mon_an_json.append({"món": item[0], "calo": calo, "khối lượng": round(calo / 4, 2)})
             bua_json[bua] = mon_an_json
-        menu_json[ngay] = bua_json
+        menu_json["menu"][ngay] = bua_json
 
-    print(json.dumps(menu_json, indent=4, ensure_ascii=False))
+    return json.dumps(menu_json, indent=4, ensure_ascii=False)
 
 def main():
     tuoi = int(input("Nhập tuổi của bạn: "))
@@ -63,7 +64,8 @@ def main():
         
         # Tạo và in ra thực đơn
         thuc_don = tao_thuc_don(daily_calories)
-        in_menu(thuc_don, daily_calories)
+        menu_json_str = in_menu(thuc_don, daily_calories,1)
+        print(menu_json_str)
     else:
         print("Giới tính không hợp lệ. Vui lòng chỉ định là 1 hoặc 0.")
 
@@ -111,4 +113,13 @@ async  def submit(personParam :PredictItem):
     person = Person(personParam.male, personParam.age, personParam.height, personParam.weight, personParam.duration, personParam.heart_rate, personParam.body_temp)
     calo =predict(person)
 
-    return str(calo)
+    if personParam.male == 1 or personParam.male == 0:
+        daily_calories = dailyCalories(personParam.male, personParam.age, personParam.height, personParam.weight)
+        print("Nhu cầu calo hàng ngày của bạn là:", daily_calories)
+        
+        # Tạo và in ra thực đơn
+        thuc_don = tao_thuc_don(daily_calories)
+        menu_json_str = in_menu(thuc_don, daily_calories,calo)
+        return str(menu_json_str)
+    else:
+        return None
