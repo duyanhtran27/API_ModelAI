@@ -18,13 +18,21 @@ def convert_numpy(data):
         return [convert_numpy(item) for item in data]
     return data
 
-def dailyCalories(gioi_tinh, tuoi, chieu_cao, can_nang):
+def dailyCalories(gioi_tinh, tuoi, chieu_cao, can_nang, caloBurn):
     if gioi_tinh == 1:  # Nam
         daily_calories = 88.362 + (13.397 * can_nang) + (4.799 * chieu_cao) - (5.677 * tuoi)
     elif gioi_tinh == 0:  # Nữ
         daily_calories = 447.593 + (9.247 * can_nang) + (3.098 * chieu_cao) - (4.330 * tuoi)
     else:
         raise ValueError("Giới tính không hợp lệ. Vui lòng chỉ định là 1 hoặc 0.")
+    print(daily_calories)
+    bmi = can_nang / ((chieu_cao/100) ** 2)
+    if bmi < 18.5:
+        daily_calories += caloBurn  # Dinh dưỡng cho người gầy
+    elif bmi >= 25:
+        daily_calories -= caloBurn  # Dinh dưỡng cho người thừa cân
+
+    print(bmi)
     return daily_calories
 
 def tao_thuc_don(daily_calories):
@@ -43,41 +51,27 @@ def tao_thuc_don(daily_calories):
     return thuc_don
 
 def in_menu(thuc_don, daily_calories, calo_burn):
-    breakfast_ratio = 0.2
-    lunch_ratio = 0.4
-    dinner_ratio = 0.4
+    
     menu_json = {
         "daily_calories": daily_calories,
         "calo_burn": calo_burn,
         "menu": {}
     }
-    
-    # Tính lượng calo cho mỗi bữa ăn
-    calo_breakfast = daily_calories * breakfast_ratio
-    calo_lunch = daily_calories * lunch_ratio
-    calo_dinner = daily_calories * dinner_ratio
-
     for ngay, bua_an in thuc_don.items():
         bua_json = {}
         for bua, mon_an in bua_an.items():
             mon_an_json = []
-            if bua == "Bữa sáng":
-                calo_per_dish = calo_breakfast / 3
-            elif bua == "Bữa trưa":
-                calo_per_dish = calo_lunch / 3
-            else:
-                calo_per_dish = calo_dinner / 3
-
             for item in mon_an:
                 ten_mon_an = item[0]
+                ty_le_calo = item[1].item() if isinstance(item[1], np.ndarray) else item[1]
+                calo = round(ty_le_calo * daily_calories, 2)
                 mon_an_json.append({
                     "món": ten_mon_an,
-                    "khối_lượng_calo": float(calo_per_dish),
-                    "khối_lượng_thức_ăn": round(calo_per_dish / 4, 2)
+                    "khối_lượng_calo": float(calo),
+                    "khối_lượng_thức_ăn": round(calo / 4, 2)
                 })
             bua_json[bua] = mon_an_json
         menu_json["menu"][ngay] = bua_json
-
     menu_json = convert_numpy(menu_json)
     return menu_json
 
@@ -89,7 +83,7 @@ def main():
 
     # Tính toán nhu cầu calo hàng ngày
     if gioi_tinh == 1 or gioi_tinh == 0:
-        daily_calories = dailyCalories(gioi_tinh, tuoi, chieu_cao, can_nang)
+        daily_calories = dailyCalories(gioi_tinh, tuoi, chieu_cao, can_nang,1)
         print("Nhu cầu calo hàng ngày của bạn là:", daily_calories)
         
         # Tạo và in ra thực đơn
@@ -148,7 +142,7 @@ async  def submit(personParam :PredictItem):
     calo =predict(person)
 
     if personParam.male == 1 or personParam.male == 0:
-        daily_calories = dailyCalories(personParam.male, personParam.age, personParam.height, personParam.weight)        
+        daily_calories = dailyCalories(personParam.male, personParam.age, personParam.height, personParam.weight, float(calo))        
 
         thuc_don = convert_numpy(tao_thuc_don(daily_calories))
         menu_json_str = in_menu(thuc_don, daily_calories,calo)
